@@ -5,13 +5,14 @@
 #include "traps.h"
 
 
-# exec(init, argv)
+# execve(init, argv, envp)
 .globl start
 start:
+  pushl $envp
   pushl $argv
   pushl $init
   pushl $0  // where caller pc would be
-  movl $SYS_exec, %eax
+  movl $SYS_execve, %eax
   int $T_SYSCALL
 
 # for(;;) exit();
@@ -30,3 +31,7 @@ argv:
   .long init
   .long 0
 
+# char *envp[] = { 0 };
+.p2align 2
+envp:
+  .long 0
