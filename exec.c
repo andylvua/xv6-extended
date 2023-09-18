@@ -67,38 +67,49 @@ exec(char *path, char **argv, char **envp)
   clearpteu(pgdir, (char*)(sz - 2*PGSIZE));
   sp = sz;
 
+  /*
+   * We need to push the arguments and environment variables onto the stack in
+   * the following order:
+   *
+   * sp     :    argc
+   * argv   :    argv[0]
+   *             argv[1]
+   *             ...
+   *             NULL
+   * envp   :    envp[0]
+   *             envp[1]
+   *             ...
+   *             NULL
+   */
+
   // Push argument strings.
   for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)
       goto bad;
-    sp = (sp - (strlen(argv[argc]) + 1)) & ~4;
+    sp = (sp - (strlen(argv[argc]) + 1)) & ~3;
     if(copyout(pgdir, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
       goto bad;
-    ustack[4 + argc] = sp;
+    ustack[1 + argc] = sp;
   }
-  ustack[4 + argc] = 0;  // Null-terminate the argv array
+  ustack[1 + argc] = 0;  // Null-terminate the argv array
 
-  ustack[0] = 0xffffffff; // fake return PC
-
+//  ustack[0] = 0xffffffff;  // No more needed due to updated call convention
   // Push argc.
-  ustack[1] = argc;
+  ustack[0] = argc;
 
   // Push environment strings.
   for (envc = 0; envp[envc]; envc++) {
     if (envc >= MAXENV)
       goto bad;
-    sp = (sp - (strlen(envp[envc]) + 1)) & ~4;
+    sp = (sp - (strlen(envp[envc]) + 1)) & ~3;
     if(copyout(pgdir, sp, envp[envc], strlen(envp[envc]) + 1) < 0)
       goto bad;
-    ustack[argc + 5 + envc] = sp;  // Offset by argc + 1 for argv
+    ustack[argc + 2 + envc] = sp;  // Offset by argc + 1 for argv
   }
-  ustack[argc + 5 + envc] = 0;  // Null-terminate the envp array
+  ustack[argc + 2 + envc] = 0;  // Null-terminate the envp array
 
-  ustack[2] = sp - (argc + envc + 2) * 4;  // argv pointer
-  ustack[3] = sp - (envc + 1) * 4;  // envp pointer
-
-  sp -= (4 + argc + envc + 2) * 4;
-  if (copyout(pgdir, sp, ustack, (4 + argc + envc + 2) * 4) < 0)
+  sp -= (3 + argc + envc) * 4;
+  if (copyout(pgdir, sp, ustack, (3 + argc + envc) * 4) < 0)
     goto bad;
 
   // Save program name for debugging.

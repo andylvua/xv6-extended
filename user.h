@@ -1,6 +1,9 @@
 struct stat;
 struct rtcdate;
 
+// environment
+extern char **environ;
+
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
