@@ -3,6 +3,7 @@
 #include "types.h"
 #include "user.h"
 #include "fcntl.h"
+#include "param.h"
 
 // Parsed command representation
 #define EXEC  1
@@ -150,6 +151,54 @@ getcmd(char *buf, int nbuf)
 }
 
 int
+is_validc(char c)
+{
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+char *
+substitute(char *arg)
+{
+  int arg_len = 0;
+  while (arg[arg_len] != '\0') {
+    arg_len++;
+  }
+
+  char *result = malloc(ENVVAL_MAX + 1);
+  if (result == 0) {
+    return 0;
+  }
+
+  int result_index = 0;
+  int i = 0;
+
+  while (i < arg_len) {
+    if (arg[i] == '$') {
+      i++;
+      char env_var_name[ENVKEY_MAX + 1];
+      int env_var_name_index = 0;
+
+      while (is_validc(arg[i]) && env_var_name_index < 31) {
+        env_var_name[env_var_name_index++] = arg[i++];
+      }
+      env_var_name[env_var_name_index] = '\0';
+      char *env_var_value = getenv(env_var_name);
+
+      if (env_var_value != 0) {
+        int env_var_value_len = 0;
+        while (env_var_value[env_var_value_len] != '\0') {
+          result[result_index++] = env_var_value[env_var_value_len++];
+        }
+      }
+    } else {
+      result[result_index++] = arg[i++];
+    }
+  }
+  result[result_index] = '\0';
+  return result;
+}
+
+int
 main(void)
 {
   static char buf[100];
@@ -165,13 +214,56 @@ main(void)
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
-    if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
+    if(strncmp(buf, "cd ", 3) == 0) {
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf)-1] = 0;  // chop \n
       if(chdir(buf+3) < 0)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
+
+    // export
+    if(strncmp(buf, "export", 6) == 0) {
+      char* arg = buf + 6;
+      while (*arg == ' ')
+        arg++;
+      arg[strlen(arg) - 1] = '\0'; // chop \n
+
+      if (*arg == '\0') {
+        for (int i = 0; environ[i] != 0; i++) {
+          printf(1, "%s\n", environ[i]);
+        }
+        continue;
+      }
+
+      char* equal_sign = strchr(arg, '=');
+      if (equal_sign == 0) {
+        printf(2, "Invalid argument format for export: %s\n", arg);
+        continue;
+      }
+
+      *equal_sign = '\0';
+      char* name = arg;
+      for (int i = 0; name[i] != '\0'; i++) {
+        if (!is_validc(name[i])) {
+          printf(2, "Invalid environment variable name: %s\n", name);
+          continue;
+        }
+      }
+
+      char* value = equal_sign + 1;
+      if (*name == '\0') {
+        printf(1, "Invalid environment variable name");
+        continue;
+      }
+
+      char* evaluated_value = substitute(value);
+      if (setenv(name, evaluated_value, 1) != 0) {
+        printf(2, "Failed to set environment variable: %s\n", name);
+      }
+      continue;
+    }
+
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait();
@@ -441,8 +533,22 @@ parseexec(char **ps, char *es)
       break;
     if(tok != 'a')
       panic("syntax");
-    cmd->argv[argc] = q;
-    cmd->eargv[argc] = eq;
+
+    if (q[strlen(q) - 1] == '\n') {
+      q[strlen(q) - 1] = '\0';
+    }
+
+    if (cmd->argv[argc] != 0) {
+      free(cmd->argv[argc]);
+    }
+    cmd->argv[argc] = substitute(q);
+
+    char *eargv = strchr(cmd->argv[argc], ' ');
+    if(eargv == 0) {
+      eargv = cmd->argv[argc] + strlen(cmd->argv[argc]);
+    }
+    cmd->eargv[argc] = eargv;
+
     argc++;
     if(argc >= MAXARGS)
       panic("too many args");
