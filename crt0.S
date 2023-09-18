@@ -15,4 +15,5 @@ _start:
 	pushl $main
 
 	call __libc_start_main
-	hlt
+	// exit() doesn't accept a return value, drop it.
+    call exit

@@ -8,7 +8,6 @@ char **environ;
 
 int __libc_start_main(int (*main) (int, char**, char**), int argc, char** argv) {
   environ = &argv[argc + 1];
-  main(argc, argv, environ);
 
-  exit();
+  return main(argc, argv, environ);
 }

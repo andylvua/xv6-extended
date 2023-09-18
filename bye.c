@@ -7,5 +7,5 @@
 int main() {
   printf(1, "Bye, world!\n");
 
-  exit();
+  return 0;
 }

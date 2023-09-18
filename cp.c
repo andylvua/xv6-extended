@@ -20,26 +20,26 @@ int main(int argc, char *argv[]) {
 
   if (strcmp(source, destination) == 0) {
     printf(2, "cp: %s and %s are the same file\n", source, destination);
-    exit();
+    return -1;
   }
   if ((src_fd = open(source, O_RDONLY)) < 0) {
     printf(2, "cp: cannot open %s\n", source);
-    exit();
+    return -1;
   }
   if (fstat(src_fd, &st) < 0) {
     printf(2, "cp: cannot stat %s\n", source);
     close(src_fd);
-    exit();
+    return -1;
   }
   if (st.type != T_FILE) {
     printf(2, "cp: %s is not a file\n", source);
     close(src_fd);
-    exit();
+    return -1;
   }
   if ((dest_fd = open(destination, O_CREATE | O_WRONLY)) < 0) {
     printf(2, "cp: cannot create %s\n", destination);
     close(src_fd);
-    exit();
+    return -1;
   }
 
   while ((r = read(src_fd, buf, sizeof(buf))) > 0) {
@@ -52,5 +52,5 @@ int main(int argc, char *argv[]) {
   }
   close(src_fd);
   close(dest_fd);
-  exit();
+  return 0;
 }
