@@ -231,6 +231,24 @@ setenv(const char *name, const char *value, int overwrite) {
   return 0;
 }
 
+int unsetenv(const char *name) {
+  if (name == 0)
+    return -1;
+
+  int len = strlen(name);
+
+  for (int i = 0; environ[i] != 0; i++) {
+    char *entry = environ[i];
+    if (strncmp(entry, name, len) == 0 && entry[len] == '=') {
+      for (int j = i; environ[j] != 0; j++) {
+        environ[j] = environ[j + 1];
+      }
+      return 0;
+    }
+  }
+  return 0;
+}
+
 int execvpe(const char *file, char *const argv[], char *const envp[]) {
   if (strchr(file, '/') != 0) {
     return execve(file, argv, envp);

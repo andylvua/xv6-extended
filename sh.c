@@ -264,9 +264,35 @@ main(void)
       continue;
     }
 
+    // unset
+    if(strncmp(buf, "unset", 5) == 0) {
+      char* arg = buf + 5;
+      while (*arg == ' ')
+        arg++;
+      arg[strlen(arg) - 1] = '\0'; // chop \n
+
+      if (*arg == '\0') {
+        printf(2, "Invalid argument format for unset: %s\n", arg);
+        continue;
+      }
+
+      char* name = arg;
+      for (int i = 0; name[i] != '\0'; i++) {
+        if (!is_validc(name[i])) {
+          printf(2, "Invalid environment variable name: %s\n", name);
+          goto next;
+        }
+      }
+
+      if (unsetenv(name) != 0) {
+        printf(2, "Failed to unset environment variable: %s\n", name);
+      }
+      continue;
+    }
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait();
+    next: ;
   }
   exit();
 }
