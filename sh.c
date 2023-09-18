@@ -53,8 +53,6 @@ int fork1(void);  // Fork but panics on failure.
 void panic(char*);
 struct cmd *parsecmd(char*);
 
-char *envp[] = { "TEST=1", 0 };
-
 // Execute cmd. Never returns.
 #if __GNUC__ >= 12
 #pragma GCC diagnostic push
@@ -82,8 +80,7 @@ runcmd(struct cmd *cmd)
     if(ecmd->argv[0] == 0)
       exit();
 
-    // For now pass dummy envp. TODO! Add environ to user.h, and execute using execvpe for PATH lookup.
-    execve(ecmd->argv[0], ecmd->argv, envp);
+    execvpe(ecmd->argv[0], ecmd->argv, environ);
     printf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 

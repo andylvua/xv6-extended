@@ -45,3 +45,4 @@ void free(void*);
 int atoi(const char*);
 char* getenv(const char *name);
 int setenv(const char *name, const char *value, int overwrite);
+int execvpe(const char *file, char *const argv[], char *const envp[]);

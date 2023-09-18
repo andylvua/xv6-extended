@@ -230,3 +230,31 @@ setenv(const char *name, const char *value, int overwrite) {
   environ = new_environ;
   return 0;
 }
+
+int execvpe(const char *file, char *const argv[], char *const envp[]) {
+  if (strchr(file, '/') != 0) {
+    return execve(file, argv, envp);
+  }
+
+  char *path = getenv("PATH");
+  if (path == 0 || *path == '\0') {
+    return -1;
+  }
+
+  char *token = strtok(path, ":");
+  while (token != 0) {
+    char full_path[strlen(token) + strlen(file) + 2]; // +2 for '/' and null terminator
+    strcpy(full_path, token);
+    if (full_path[strlen(full_path) - 1] != '/') {
+      strcat(full_path, "/");
+    }
+    strcat(full_path, file);
+
+    int exec_result = execve(full_path, argv, envp);
+    if (exec_result == 0) {
+      return exec_result;
+    }
+    token = strtok(0, ":");
+  }
+  return -1;
+}
