@@ -168,8 +168,8 @@ Although it seems like a slightly better approach, it's not. Now we can modify t
 variables for a specific process, but there is still no way to pass the environment variables to the user programs.
 However, we must store additional information in the process structure, which breaks the OS structure.
 
-Moreover, these approaches do not implement environment variables support as such. They only allow us to modify
-the PATH variable, which is, well, not very useful and interesting.
+Moreover, these approaches do not implement environment variables support as such. They only implement the 'isolated' 
+PATH variable, which is, well, not very useful and interesting.
 
 I wanted to fully implement the environment variables support, so I had to come up with a better solution.
 
@@ -245,8 +245,8 @@ Continuing with `envp`, it is often passed as a third argument to the program's 
 int main(int argc, char *argv[], char *envp[]);
 ```
 
-It's achieved by placing the pointer to the environment variables array on stack which looks like this depending on the
-system's ABI, but let's use the System V ABI:
+It's achieved by first placing the pointer to the environment variables array on stack which, depending on the
+system's ABI (let's use the System V ABI), looks like this:
 
 ```text
    * sp     :    argc
@@ -260,6 +260,7 @@ system's ABI, but let's use the System V ABI:
    *             NULL
 ```
 
+Then it is the responsibility of the `exec()` function to prepare the stack.
 Let's take a closer look at the `exec()` function to understand how my modification works:
 
 ```c
@@ -274,12 +275,13 @@ Let's take a closer look at the `exec()` function to understand how my modificat
   }
   ustack[argc + 2 + envc] = 0;
   ...
+  // Other insignificant modifications
 ```
 
 This modified version of the `exec()` function iterates over the `envp` array and copies the pointers to the environment
 variables to the stack. 
 
-Now `envp` pointer is now should be accessible from the user program. Well, almost. There is still one major problem.
+Now `envp` pointer should be accessible from the user program. Well, almost. There is still one major problem.
 The xv6 operating system lacks the C runtime, especially `crt0`. `crt0` is basically the set of startup routines
 linked into C program that performs initialization tasks before calling the main function. Indeed, let's take a look
 on how the `main()` function is called on the UNIX systems:
@@ -290,9 +292,9 @@ As wee see, the entrypoint of the program is not the `main()` function, but the 
 `__libc_start_main()` function, which, in turn, calls the `main()` function. 
 
 We need these functions to properly initialize the environment and call the `main()` function with the correct arguments.
-And indeed, if we take a look on what POSIX says about environment variables, there is one more problem that we aim to solve. 
+And if we take a look on what POSIX says about environment variables, there is one more problem that we aim to solve. 
 It says that the use of a third argument to the main function is not specified in POSIX. According to POSIX, the
-environment should be accessed via the external variable `environ`. Setting this variable to point to the environment
+environment should be accessed via the external variable `environ`. Setting this variable 
 is the responsibility of the `__libc_start_main()` function.
 
 Let's take a look on my implementation of the `crt0`:
@@ -328,8 +330,12 @@ for memory and cache efficiency. However, here we can drop it for simplicity, es
 
 Now we should prepare the stack for the `__libc_start_main()` function:
 ```c
-int __libc_start_main(int (*) (int, char**, char**), int, char**);
+int __libc_start_main(int (*main) (int, char**, char**), int argc, char** argv);
 ```
+
+Note that my implementation of this function is simplified due to incompleteness of the xv6 operating system. 
+Implementing the full version with all functionality, including `__libc_csu_init()`, `__libc_csu_fini()`,
+auxiliary vectors, etc., requires a lot of work and just unreasonable for this lab.
 
 The first argument is the `main()` function, the second argument is the `argc` and the third argument is the `argv` array.
 We push these to the stack and call the `__libc_start_main()` function:
@@ -358,9 +364,12 @@ As we see, it takes care of setting the `environ` variable to point to the envir
 is calculated by adding the `argc` to the `argv` array pointer and then adding one to the result (to skip the `NULL` terminator of the `argv` array).
 It then just calls the `main()` function with the correct arguments.
 
+Well, to be completely precise here, setting the `environ` variable is the responsibility of the `__libc_init_first()`
+function. However, to keep things simple, I've decided to omit it.
+
 As you may have noticed, there is one more function call in the `_start` function: `exit()`. It is used to terminate
 the process after the `main()` function returns, and that's why we had to manually call `exit()` in the user programs.
-Now we can just return from the `main()` function and `crt0` will take care of the rest. By the way, this also eliminates
+Now we can just return from the `main()` function and `start` will take care of the rest. By the way, this also eliminates
 the need of pushing this weird fake return address to the stack: `ustack[0] = 0xfffffff` which is used in the original
 implementation of the `exec()` function for xv6.
 
@@ -379,7 +388,7 @@ _%: %.o $(ULIB)
 
 The `-e main` option tells the linker to use `main` as the entrypoint of the program. We need to change it to `_start`:
 
-```makefile
+```text
 $(LD) $(LDFLAGS) -N -e _start -Ttext 0 -o $@ $^
 ```
 
@@ -398,7 +407,8 @@ int unsetenv(const char *name);
 char *getenv(const char *name);
 ```
 
-They are very similar to the POSIX functions with the same names. 
+They are very similar to the POSIX functions with the same names. I won't include the implementation here, because
+it's again not our point of interest. However, feel free to take a look on the `ulib.c` file.
 
 Now that's it! We have implemented the environment variables support in the xv6 operating system, and we can finally
 continue with the `PATH` variable.
