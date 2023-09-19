@@ -456,6 +456,12 @@ which allow us to set and unset the environment variables directly from the shel
 
 Feel free to try it!
 
+## Demo
+
+For your convenience, you can watch the video online: **https://youtu.be/mlgXrMVUv44**
+
+> Alternatively, you can find the video file the `demo` folder: [OS_xv6_demo.mp4](demo/OS_xv6_demo.mp4)
+
 ## License
 The [MIT](https://choosealicense.com/licenses/mit/) License (MIT)
 
