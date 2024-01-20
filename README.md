@@ -1,14 +1,10 @@
-# Lab 1. xv6 compilation and usage
-
-> Author: Andrii Yaroshevych
-> 
-> Variant: None
+# xv6 Extended
 
 ## Description
-This lab features the compilation, modification and usage of the xv6 operating system. 
-The main goal of this lab is to get familiar with the operating systems and their structure.
+This project features the compilation, modification and usage of the xv6 operating system. 
+The main goal of this project is to get familiar with the operating systems and their structure.
 
-Besides, this lab includes the implementation of custom system calls, 
+Besides, it includes the implementation of custom system calls, 
 environment variables support including PATH and some shell improvements.
 
 ## Compilation and running
@@ -142,7 +138,7 @@ This is a special environment variable which is used to specify the directories 
 the executable files. It is used by the `execvpe()` function. It's explained in more detail in the 
 [Additional tasks implemented](#additional-tasks-implemented) section.
 
-## Additional tasks implemented
+## Extended functionality
 - [x] PATH environment variable support
 
 In this section, I want to dive deeper into the implementation of the environment support and the `PATH` variable.
@@ -335,7 +331,7 @@ int __libc_start_main(int (*main) (int, char**, char**), int argc, char** argv);
 
 Note that my implementation of this function is simplified due to incompleteness of the xv6 operating system. 
 Implementing the full version with all functionality, including `__libc_csu_init()`, `__libc_csu_fini()`,
-auxiliary vectors, etc., requires a lot of work and just unreasonable for this lab.
+auxiliary vectors, etc., requires a lot of work and just unreasonable for this project.
 
 The first argument is the `main()` function, the second argument is the `argc` and the third argument is the `argv` array.
 We push these to the stack and call the `__libc_start_main()` function:
@@ -458,9 +454,7 @@ Feel free to try it!
 
 ## Demo
 
-For your convenience, you can watch the video online: **https://youtu.be/mlgXrMVUv44**
-
-> Alternatively, you can find the video file the `demo` folder: [OS_xv6_demo.mp4](demo/OS_xv6_demo.mp4)
+> You can find the demo-video file the `demo` folder: [OS_xv6_demo.mp4](demo/OS_xv6_demo.mp4)
 
 ## License
 The [MIT](https://choosealicense.com/licenses/mit/) License (MIT)
